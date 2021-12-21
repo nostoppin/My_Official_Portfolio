@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    
+</head>
+<body>
+    
+    <script>
+
+        var g_canvas  = document.getElementById("myCanvas");
+        var g_context = g_canvas.getContext("2d");
+
+        var g_frames  = 60;
+        var g_time    = 1000/g_frames;
+
+        var g_leftKey_flag    = 0;
+        var g_rightKey_flag   = 0;
+        var g_forwardKey_flag = 0;
+        var g_downKey_flag    = 0;
+
+        var g_cursor_pos_X = 0;
+        var g_cursor_pos_Y = 0;
+
+        var g_multiplayer_flag = 0; 
+
+        var g_player_one_headSize = 0; 
+        var g_player_one_head_posX = 0;
+        var g_player_one_head_posY = 0; 
+
+        var g_player_two_headSize = 0;
+        var g_player_two_head_posX = 0;
+        var g_player_two_head_posY = 0;
+
+
+        class c_button
+        {
+            constructor(l_x,l_y,l_width,l_height,l_color,l_text)
+            {
+                this.button_pos_x = l_x;
+                this.button_pos_y = l_y;
+                
+                this.button_width  = l_width;
+                this.button_height = l_height;
+
+                this.button_color = l_color;
+
+                this.button_text = l_text;
+
+                this.menu_screen_active_flag = 1;
+            }
+
+            m_draw_button(l_context)
+            {
+                if( this.menu_screen_active_flag == 1 )
+                {
+                    l_context.fillStyle = this.button_color;
+                    l_context.fillRect(this.button_pos_x,this.button_pos_y,this.button_width,this.button_height);
+
+                    l_context.strokeStyle = "black";
+                    l_context.strokeRect(this.button_pos_x,this.button_pos_y,this.button_width,this.button_height);
+
+                    //button text
+                    l_context.font = "15px monospace";
+                    l_context.fillStyle = "black";
+                    l_context.fillText(this.button_text, this.button_pos_x+(this.button_width/2)-98 , this.button_pos_y+(this.button_height/2)+4);
+                }
+            }
+
+            m_draw_button_menu_Screen(l_context)
+            {
+                if( this.menu_screen_active_flag == 1 )
+                {
+                    l_context.font = "40px monospace";
+                    l_context.fillStyle = "darkred";
+                    l_context.fillText("! MAIN MENU !", (g_canvas.width/2)-130  , 100);
+                }
+                
+            }
+
+            m_draw_restart_button(l_context)
+            {
+                //if( this.menu_screen_active_flag == 0 )
+                {
+                    l_context.fillStyle = this.button_color;
+                    l_context.fillRect(this.button_pos_x,this.button_pos_y,this.button_width,this.button_height);
+
+                    l_context.strokeStyle = "black";
+                    l_context.strokeRect(this.button_pos_x,this.button_pos_y,this.button_width,this.button_height);
+
+                    //button text
+                    l_context.font = "15px monospace";
+                    l_context.fillStyle = "black";
+                    l_context.fillText(this.button_text, this.button_pos_x+(this.button_width/2)-37 , this.button_pos_y+(this.button_height/2)+4);
+                }
+            }
+        }
+
+        
+
+        class c_box
+        {
+            constructor(l_x,l_y,l_size,l_color)
+            {
+                this.box_pos_X = l_x;
+                this.box_pos_Y = l_y;
+
+                this.box_size  = l_size;
+                
+                this.box_color = l_color; 
+
+                this.horizontal_speed = 5;
+                this.vertical_speed   = 5;
+            }
+
+            m_draw_Box(l_context)
+            {
+                l_context.fillStyle = this.box_color;
+                l_context.fillRect(this.box_pos_X,this.box_pos_Y,this.box_size,this.box_size);
+
+                //body differentiator [don't uncomment this]
+                l_context.strokeStyle = "black";
+                l_context.strokeRect(this.box_pos_X,this.box_pos_Y,this.box_size,this.box_size);
+            }
+        }
+
+        class c_snake
+        {
+            constructor(l_x,l_y,l_color)
+            {
+                this.snake_init_X = l_x;
+                this.snake_init_Y = l_y;
+
+                this.snake_pos_X  = this.snake_init_X;
+                this.snake_pos_Y  = this.snake_init_Y;
+
+                this.body_size   = 15;
+                
+                this.snake_color = l_color; 
+
+                this.horizontal_speed = 8;
+                this.vertical_speed   = 8;
+
+                this.snake_body_array = new Array(50);
+                this.visible_snake_body = 15;
+
+                this.forwardKey_flag = 0;
+                this.leftKey_flag = 0;
+                this.rightKey_flag = 0;
+                this.downKey_flag = 0;
+
+                this.current_direction = " ";
+
+                this.snake_score = 1;
+
+                this.snake_visibility = 1;
+                
+                this.x_pos_array         = new Array(this.body_size*this.snake_body_array.length);
+                this.x_pos_array_initial = this.snake_pos_X;
+                this.x_pos_array_value   = this.x_pos_array_initial;
+                
+                this.y_pos_array         = new Array(this.body_size*this.snake_body_array.length);
+                this.y_pos_array_initial = this.snake_pos_Y;
+                this.y_pos_array_value   = this.y_pos_array_initial;
+
+                for( var i=0 ; i<this.x_pos_array.length ; i++ )
+                {
+                    this.x_pos_array[i] = this.x_pos_array_value;
+                    this.y_pos_array[i] = this.y_pos_array_value;
+
+                    this.x_pos_array_value+=1;         
+                }
+                
+                //creates snake
+                for( var i=0 ; i<this.snake_body_array.length ; i++ )
+                {
+                    this.snake_body_array[i] = new c_box(this.snake_pos_X,this.snake_pos_Y,this.body_size,this.snake_color);
+
+                    this.snake_pos_X += this.body_size;
+                }     
+            }
+
+            m_draw_snake(l_context)
+            {
+                if( this.snake_visibility )
+                {
+                    for( var i=0; i<this.visible_snake_body ; i++ )
+                    {
+                        this.snake_body_array[i].m_draw_Box(l_context);
+                    }
+                }         
+            }
+
+            m_move_snake()
+            {
+                
+                if( this.leftKey_flag == 1 || this.rightKey_flag == 1 || this.forwardKey_flag == 1 || this.downKey_flag == 1  )
+                {
+                    for( var k=0 ; k<this.vertical_speed ; k++ )
+                    {
+                        for( var i=this.x_pos_array.length-1 ; i>0 ; i-- )
+                        {
+                            {
+                                this.x_pos_array[i] = this.x_pos_array[i-1];
+                                this.y_pos_array[i] = this.y_pos_array[i-1];
+                            }
+                        }
+
+                        if( this.forwardKey_flag == 1 )
+                        {
+                            this.y_pos_array[0]--;
+                        }
+                        if( this.leftKey_flag == 1 ) 
+                        {
+                            this.x_pos_array[0]--; 
+                        }
+                        if( this.rightKey_flag == 1)
+                        {
+                            this.x_pos_array[0]++;
+                        }
+                        if( this.downKey_flag == 1 )
+                        {
+                            this.y_pos_array[0]++;  
+                        }
+
+                        var l_i = 0;
+
+                        for( var i=0 ; i<this.x_pos_array.length ; i+=this.body_size)
+                        {
+                            
+                            this.snake_body_array[l_i].box_pos_X = this.x_pos_array[i];
+                            this.snake_body_array[l_i].box_pos_Y = this.y_pos_array[i];
+
+                            l_i++;
+                        }
+                    }
+                }  
+            }
+        }
+
+        class c_powerup
+        {
+            constructor(l_x,l_y,l_size,l_r,l_canvas)
+            {
+                this.powerUp_pos_X  = l_x;
+                this.powerUp_pos_Y  = l_y;
+
+                this.powerUp_size   = l_size;
+                this.powerUp_color  = "#f0375f";
+
+                this.powerUp_radius = l_r; 
+
+                this.isActive_flag  = 1;
+
+                this.frame_counter = 0;
+
+                this.canvas_height = l_canvas.height;
+                this.canvas_width  = l_canvas.width;
+            }
+
+            m_draw_powerUp(l_context)
+            {
+                if( this.isActive_flag == 1 )
+                {   
+                    l_context.beginPath();
+                    l_context.fillStyle = this.powerUp_color;
+                    l_context.arc(this.powerUp_pos_X,this.powerUp_pos_Y,this.powerUp_radius,0,2*Math.PI);
+                    l_context.fill();       
+                    l_context.closePath();
+
+                    l_context.beginPath();
+                    l_context.strokeStyle = "#f04a6e";
+                    l_context.arc(this.powerUp_pos_X,this.powerUp_pos_Y,this.powerUp_radius-1,0,2*Math.PI);
+                    l_context.stroke();       
+                    l_context.closePath();
+                }
+            }
+
+            m_find_new_position()
+            {
+                this.powerUp_pos_X = Math.floor(Math.random() * ((this.canvas_width-this.powerUp_radius) - this.powerUp_radius) ) + this.powerUp_radius;
+                this.powerUp_pos_Y = Math.floor(Math.random() * ((this.canvas_height-this.powerUp_radius) - this.powerUp_radius) ) + this.powerUp_radius;
+            }
+
+            m_spawn_manager()
+            {
+                this.frame_counter++;
+                
+                if( this.frame_counter >= g_frames*2.5 )
+                {
+                    this.m_find_new_position();
+                    this.frame_counter = 0;
+                }
+            }
+
+        }
+
+        var g_dist_p1 = 0;
+        function f_detect_powerUp_player_one()
+        {
+            
+            g_dist_p1 = f_snake2powerup_distFinder(g_player_one_head_posX,g_player_one_head_posY,player_powerUp.powerUp_pos_X,player_powerUp.powerUp_pos_Y)
+            
+            if( g_dist_p1 <= player_powerUp.powerUp_radius+5 )
+            {
+                player_powerUp.isActive_flag = 0;
+
+                //document.getElementById("player_one").innerHTML = player_one_snake.snake_score++;
+                
+                player_powerUp.m_find_new_position();
+
+                player_powerUp.isActive_flag = 1;
+
+                if( player_one_snake.visible_snake_body != 50 )
+                {
+                    player_one_snake.visible_snake_body++;
+                }
+                
+            }
+        }
+        var g_dist_p2 = 0;
+        function f_detect_powerUp_player_two()
+        {
+            //var l_head_size = player_two_snake.body_size; 
+
+            g_dist_p2 = f_snake2powerup_distFinder(g_player_two_head_posX,g_player_two_head_posY,player_powerUp.powerUp_pos_X,player_powerUp.powerUp_pos_Y)
+            
+            if( g_dist_p2 <= player_powerUp.powerUp_radius+5 )
+            {
+                player_powerUp.isActive_flag = 0;
+                
+                //document.getElementById("player_two").innerHTML = player_two_snake.snake_score++;
+
+                player_powerUp.m_find_new_position();
+
+                player_powerUp.isActive_flag = 1;
+
+                if( player_two_snake.visible_snake_body != 50 )
+                {
+                    player_two_snake.visible_snake_body++;
+                }  
+            }
+        }
+
+        function f_snake2powerup_distFinder(l_x1,l_y1,l_x2,l_y2)
+        {
+            return Math.sqrt(((l_x1-l_x2)*(l_x1-l_x2))+((l_y1-l_y2)*(l_y1-l_y2)));
+        }
+
+       
+
+        function f_boundary_collisions()
+        {  
+            g_player_one_headSize  = player_one_snake.body_size; 
+            g_player_one_head_posX = player_one_snake.snake_body_array[0].box_pos_X;
+            g_player_one_head_posY = player_one_snake.snake_body_array[0].box_pos_Y;
+
+            g_player_two_headSize  = player_two_snake.body_size; 
+            g_player_two_head_posX = player_two_snake.snake_body_array[0].box_pos_X;
+            g_player_two_head_posY = player_two_snake.snake_body_array[0].box_pos_Y;  
+
+            if( g_player_one_head_posX <= 0 || g_player_one_head_posX + g_player_one_headSize >= g_canvas.width )
+            {
+                player_one_snake.snake_visibility = 0;
+                //document.getElementById("player_one").innerHTML = "GAME OVER";
+            }
+            if( g_player_two_head_posX <= 0 || g_player_two_head_posX + g_player_two_headSize >= g_canvas.width )
+            {
+                player_two_snake.snake_visibility = 0;
+                //document.getElementById("player_two").innerHTML = "GAME OVER";
+            }
+            if( g_player_one_head_posY <=0 || g_player_one_head_posY + g_player_one_headSize >= g_canvas.height )
+            {
+                player_one_snake.snake_visibility = 0;
+                //document.getElementById("player_one").innerHTML = "GAME OVER";
+            }
+            if( g_player_two_head_posY <=0 || g_player_two_head_posY + g_player_two_headSize >= g_canvas.height )
+            {
+                player_two_snake.snake_visibility = 0;
+                //document.getElementById("player_two").innerHTML = "GAME OVER";
+            }
+        }
+
+       
+        
+        function f_mp_snake_collision()
+        {
+            g_player_one_headSize  = player_one_snake.body_size; 
+            g_player_one_head_posX = player_one_snake.snake_body_array[0].box_pos_X;
+            g_player_one_head_posY = player_one_snake.snake_body_array[0].box_pos_Y;
+
+            g_player_two_headSize  = player_two_snake.body_size; 
+            g_player_two_head_posX = player_two_snake.snake_body_array[0].box_pos_X;
+            g_player_two_head_posY = player_two_snake.snake_body_array[0].box_pos_Y;  
+
+            if( g_multiplayer_flag == 1 )
+            {
+                for( var i=0 ; i<player_two_snake.visible_snake_body ; i++ )
+            {
+                if( g_player_one_head_posX + g_player_one_headSize >= player_two_snake.snake_body_array[i].box_pos_X &&
+                    g_player_one_head_posX <=  player_two_snake.snake_body_array[i].box_pos_X + g_player_two_headSize && 
+                    g_player_one_head_posY + g_player_one_headSize >= player_two_snake.snake_body_array[i].box_pos_Y &&
+                    g_player_one_head_posY <= player_two_snake.snake_body_array[i].box_pos_Y + g_player_two_headSize )
+                {
+                    console.log("collision detected");
+                }   
+            }
+
+            for( var i=0 ; i<player_one_snake.visible_snake_body ; i++ )
+            {
+                if( g_player_two_head_posX + g_player_one_headSize >= player_one_snake.snake_body_array[i].box_pos_X &&
+                    g_player_two_head_posX <=  player_one_snake.snake_body_array[i].box_pos_X + g_player_two_headSize && 
+                    g_player_two_head_posY + g_player_one_headSize >= player_one_snake.snake_body_array[i].box_pos_Y &&
+                    g_player_two_head_posY <= player_one_snake.snake_body_array[i].box_pos_Y + g_player_one_headSize )
+                {
+                    console.log("collision detected");
+                }   
+            }
+            }
+            
+            
+        }
+        
+            
+        
+        
+        //eats itself
+        function f_sp_snake_collision()
+        {
+            for(var i=3; i<player_one_snake.visible_snake_body ; i++)
+            {
+                if( g_player_one_head_posX + g_player_one_headSize >= player_one_snake.snake_body_array[i].box_pos_X &&
+                    g_player_one_head_posX <=  player_one_snake.snake_body_array[i].box_pos_X + g_player_two_headSize && 
+                    g_player_one_head_posY + g_player_one_headSize >= player_one_snake.snake_body_array[i].box_pos_Y &&
+                    g_player_one_head_posY <= player_one_snake.snake_body_array[i].box_pos_Y + g_player_one_headSize )
+                {
+                    console.log("true");
+                }
+            }
+
+            for(var i=3; i<player_two_snake.visible_snake_body ; i++)
+            {
+                if( g_player_two_head_posX + g_player_two_headSize >= player_two_snake.snake_body_array[i].box_pos_X &&
+                    g_player_two_head_posX <=  player_two_snake.snake_body_array[i].box_pos_X + g_player_two_headSize && 
+                    g_player_two_head_posY + g_player_two_headSize >= player_two_snake.snake_body_array[i].box_pos_Y &&
+                    g_player_two_head_posY <= player_two_snake.snake_body_array[i].box_pos_Y + g_player_two_headSize )
+                {
+                    console.log("true");
+                }
+            }
+
+            
+        }
+
+        function f_clearCanvas()
+        {
+            g_context.clearRect(0,0,g_canvas.width,g_canvas.height);
+            g_context.fillStyle = "#f0e9d5";
+            g_context.fillRect(0,0,g_canvas.width,g_canvas.height);
+
+            
+            g_context.strokeStyle = "black";
+            g_context.strokeRect(0,0,g_canvas.width,g_canvas.height);
+        }
+
+
+        function f_button_Detection()
+        {
+          if(  g_cursor_pos_X > menu_object.button_pos_x && 
+               g_cursor_pos_X < menu_object.button_pos_x + menu_object.button_width &&
+               g_cursor_pos_Y > menu_object.button_pos_y && 
+               g_cursor_pos_Y < menu_object.button_pos_y + menu_object.button_width )
+               {
+                    console.log("button sp");
+                    menu_object.menu_screen_active_flag = 0;
+                    player_two_snake.snake_visibility = 0;
+                    
+                    
+               }
+          if(  g_cursor_pos_X > menu_object_mp.button_pos_x && 
+               g_cursor_pos_X < menu_object_mp.button_pos_x + menu_object_mp.button_width &&
+               g_cursor_pos_Y > menu_object_mp.button_pos_y && 
+               g_cursor_pos_Y < menu_object_mp.button_pos_y + menu_object_mp.button_width )
+               {
+                    console.log("button mp");
+                    menu_object.menu_screen_active_flag = 0;
+
+                    g_multiplayer_flag = 1; 
+               }
+          if(  g_cursor_pos_X > menu_restart_object.button_pos_x && 
+               g_cursor_pos_X < menu_restart_object.button_pos_x + menu_object_mp.button_width &&
+               g_cursor_pos_Y > menu_restart_object.button_pos_y && 
+               g_cursor_pos_Y < menu_restart_object.button_pos_y + menu_object_mp.button_width )
+               {
+                    console.log("QUIT");
+                    
+               }
+
+        }
+
+        function f_game_loop()
+        {
+            //functions
+            if( menu_object.menu_screen_active_flag == 0 || menu_object_mp.menu_screen_active_flag == 0 )
+            {
+                player_powerUp.m_spawn_manager();
+
+                f_boundary_collisions();
+                
+                f_mp_snake_collision();
+                f_sp_snake_collision();  
+
+                player_one_snake.m_move_snake();
+                player_two_snake.m_move_snake();
+
+                f_detect_powerUp_player_one();
+                f_detect_powerUp_player_two();
+
+                //clear canvas
+                f_clearCanvas();
+
+                //draw
+                player_one_snake.m_draw_snake(g_context);
+                player_two_snake.m_draw_snake(g_context);
+
+                player_powerUp.m_draw_powerUp(g_context);
+
+                menu_restart_object.m_draw_restart_button(g_context);
+            }
+           
+           if( menu_object.menu_screen_active_flag == 1 && menu_object_mp.menu_screen_active_flag == 1 )
+            {
+                f_clearCanvas();
+
+                menu_object.m_draw_button(g_context);
+                menu_object_mp.m_draw_button(g_context);
+                menu_screen_object.m_draw_button_menu_Screen(g_context);
+            }
+        }
+
+        //-------------------------------------//
+        var player_one_snake = new c_snake(200,200,"#4fc44f");
+        var player_two_snake = new c_snake(500,200,"#537ced")
+
+        var player_powerUp = new c_powerup(100,200,10,10,g_canvas);
+
+        var menu_object         = new c_button(150,300,200,50,"#ffe58f","SinglePlayer[arrow keys]");
+        var menu_object_mp      = new c_button(450,300,200,50,"#ffe58f","MultiPlayer [arrow|wasd]");
+
+        var menu_screen_object  = new c_button(100,100,0,0,"NA","NA");
+        
+        var menu_restart_object = new c_button(692,550,100,40,"#ffe58f","Quit Game");
+        //-------------------------------------//
+
+        var interval_id = setInterval(f_game_loop,g_time);
+        
+        //..............................................//
+        function f_keyDown_eventHandler(l_event) 
+        {   
+            if(l_event.keyCode == 37 && player_one_snake.current_direction != "right" ) 
+            {         
+                player_one_snake.leftKey_flag = 1;
+                player_one_snake.current_direction = "left";
+            }
+            if(l_event.keyCode == 39 && player_one_snake.current_direction != "left")
+            {
+                player_one_snake.rightKey_flag = 1;
+                player_one_snake.current_direction = "right";
+            }
+            if(l_event.keyCode == 38 && player_one_snake.current_direction != "down")
+            {
+                player_one_snake.forwardKey_flag = 1;
+                player_one_snake.current_direction = "up";
+            }
+            if(l_event.keyCode == 40 && player_one_snake.current_direction != "up")
+            {
+                player_one_snake.downKey_flag = 1;
+                player_one_snake.current_direction = "down";
+            }
+            //....................................//
+            if(l_event.keyCode == 65 && player_two_snake.current_direction != "right")
+            {         
+                player_two_snake.leftKey_flag = 1;
+                player_two_snake.current_direction = "left";
+            }
+            if(l_event.keyCode == 68 && player_two_snake.current_direction != "left")
+            {
+                player_two_snake.rightKey_flag = 1;
+                player_two_snake.current_direction = "right";
+            }
+            if(l_event.keyCode == 87 && player_two_snake.current_direction != "down")
+            {
+                player_two_snake.forwardKey_flag = 1;
+                player_two_snake.current_direction = "up";
+            }
+            if(l_event.keyCode == 83 && player_two_snake.current_direction != "up")
+            {
+               player_two_snake.downKey_flag = 1;
+               player_two_snake.current_direction = "down";
+            }
+
+
+        }
+
+        function f_keyUp_eventHandler(l_event) 
+        {   
+            if(l_event.keyCode == 37)
+            {
+                player_one_snake.leftKey_flag = 0;
+            }
+            if(l_event.keyCode == 39)
+            {
+                player_one_snake.rightKey_flag = 0;
+            }
+            if(l_event.keyCode == 38)
+            { 
+                player_one_snake.forwardKey_flag = 0;
+            }
+            if(l_event.keyCode == 40)
+            {    
+                player_one_snake.downKey_flag = 0;
+            }
+            //....................................//
+            if(l_event.keyCode == 65)
+            {
+                player_two_snake.leftKey_flag = 0;
+            }
+            if(l_event.keyCode == 68)
+            {
+                player_two_snake.rightKey_flag = 0;
+            }
+            if(l_event.keyCode == 87)
+            { 
+                player_two_snake.forwardKey_flag = 0;
+            }
+            if(l_event.keyCode == 83)
+            {    
+                player_two_snake.downKey_flag = 0;
+            }
+        }
+
+        
+        function f_mouseMove_eventHandler(l_event)
+        {
+            g_cursor_pos_X = l_event.clientX;
+            g_cursor_pos_Y = l_event.clientY;
+        }
+
+        function f_mouseDown_eventhandler(l_evt)
+        {
+            if( l_evt.button == 0 )
+            {   
+                f_button_Detection();
+            }
+        }
+        //..............................................//
+
+        document.addEventListener("keydown",f_keyDown_eventHandler);
+        document.addEventListener("keyup",f_keyUp_eventHandler);
+
+        document.addEventListener("mousemove",f_mouseMove_eventHandler);
+        document.addEventListener("mousedown",f_mouseDown_eventhandler);
+
+        
+    </script>
+
+</body>
+</html>

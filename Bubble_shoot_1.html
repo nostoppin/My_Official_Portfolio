@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> | Tank Game | </title>
+
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    <br>
+    <button type="button" onclick="f_reset_game()">RESET GAME</button>
+</head>
+<body>
+    
+    <script>
+
+        var g_canvas  = document.getElementById("myCanvas");
+        var g_context = g_canvas.getContext("2d");
+
+        var g_frames  = 60;
+        var g_time    = 1000/g_frames;
+
+        
+
+
+        class c_tank 
+        {
+            constructor(l_x,l_size,l_col)
+            {
+                this.RotateClockwise = 0;
+                this.RotateAnticlockwise = 0;
+                this.shoot = 0;
+
+                this.tank_size    = l_size;
+                this.tank_color   = l_col;
+
+                this.rotationA_rad = 0;
+                this.rotationA_deg = -90;
+
+                this.tank_posX = l_x - this.tank_size;
+                this.tank_posY = g_canvas.height - this.tank_size;
+
+                this.turret_height = 10;
+                this.turret_width  = 60; 
+                
+                this.turret_posX = this.tank_posX+(this.tank_size/2);
+                this.turret_posY = this.tank_posY+(this.tank_size/2);   
+                
+                this.bullet_X = this.turret_posX+this.turret_width/2;
+                this.bullet_Y = this.turret_posY+this.turret_height;
+
+                this.obj_bullet = new c_bullet(this.turret_posX,this.turret_posY,this.turret_height);
+            }
+
+            m_drawTank(l_context)
+            {
+                l_context.fillStyle = this.tank_color;
+                l_context.fillRect(this.tank_posX,this.tank_posY,this.tank_size,this.tank_size);
+
+                
+
+                l_context.fillStyle = this.tank_color;
+                l_context.beginPath();
+                l_context.arc(this.tank_posX+this.tank_size/2,this.turret_posY-this.tank_size/2,this.tank_size/2,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+
+                l_context.fillStyle = "Black";
+                l_context.beginPath();
+                l_context.arc(this.turret_posX,this.turret_posY,this.turret_height,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+                
+                //turret 
+                l_context.save();
+                l_context.translate(this.turret_posX,this.turret_posY);
+
+                this.rotationA_rad = (this.rotationA_deg) * (Math.PI/180);
+                l_context.rotate(this.rotationA_rad);
+
+                l_context.fillStyle = "black";
+                l_context.fillRect(0,-(this.turret_height/2),this.turret_width,this.turret_height);
+
+                l_context.restore();
+                //------
+
+                //bullet
+                this.obj_bullet.m_drawBullet(l_context);
+
+                if( this.bullet_posX > g_canvas.width || this.bullet_posY > g_canvas.height ||
+                    this.bullet_posX < 0 || this.bullet_posY < 0
+                 )
+                 {
+                    this.obj_bullet.m_drawBullet(l_context);
+                 }
+            }
+
+            m_move_turret()
+            {
+                if(this.RotateAnticlockwise == 1)
+                {
+                    this.rotationA_deg -= 2;
+                    if( this.rotationA_deg < -180)
+                    {
+                        this.rotationA_deg = -180;
+                    }
+                }
+                if(this.RotateClockwise == 1)
+                {
+                    this.rotationA_deg += 2;
+                    if( this.rotationA_deg > 0)
+                    {
+                        this.rotationA_deg = 0;
+                    }
+                }                
+            }
+
+            m_turret_Shoot()
+            {
+                if(this.obj_bullet.isActive == 0)
+                    {
+                        this.obj_bullet.isActive = 1;
+                        this.obj_bullet.bullet_shot_angle = this.rotationA_deg;
+                    }
+                
+            }
+            
+            m_ManageBulletMovement(l_Canvas)
+            {
+                this.obj_bullet.m_shot_trajectory();
+                
+                
+                if(this.obj_bullet.bullet_posX > l_Canvas.width || 
+                    this.obj_bullet.bullet_posX < 0 ||
+                    this.obj_bullet.bullet_posY > l_Canvas.height ||
+                   this.obj_bullet.bullet_posY < 0 )
+                    {
+                        this.obj_bullet.isActive = 0;
+                        this.obj_bullet.bullet_posX = this.turret_posX;
+                        this.obj_bullet.bullet_posY = this.turret_posY;
+                    }
+                    
+            }
+        }
+
+        class c_bullet
+        {
+            constructor(l_x,l_y,l_radius)
+            {
+                this.bullet_posX = l_x;
+                this.bullet_posY = l_y;
+
+                this.bullet_radius = l_radius;
+                this.bullet_color  = "darkred";
+
+                this.bullet_speed = 20;
+                this.isActive = 0;
+                this.bullet_shot_angle = 0;
+                
+            }
+
+            m_drawBullet(l_context)
+            {
+                if(this.isActive== 0) {return;}
+
+                l_context.fillStyle = this.bullet_color;
+                l_context.beginPath();
+                l_context.arc(this.bullet_posX,this.bullet_posY,this.bullet_radius,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+
+                
+            }   
+
+            m_shot_trajectory()
+            {
+                if(this.isActive == 0) {return;}
+                
+                this.bullet_posX += this.bullet_speed * Math.cos(this.bullet_shot_angle * Math.PI/180);
+                this.bullet_posY += this.bullet_speed * Math.sin(this.bullet_shot_angle * Math.PI/180);
+                    
+            }
+                    
+        }
+
+        class c_target
+        {
+            constructor(l_x,l_y,l_r,l_color)
+            {
+                this.target_y_position              = l_y;
+                this.target_x_position              = l_x;
+                this.target_radius                  = l_r;
+                this.target_color                   = l_color;  
+                this.isActive                       = 1;
+            }
+
+            m_draw_target(l_context)
+            {
+                if( this.isActive == 1)
+                    {
+                l_context.fillStyle = this.target_color;
+                l_context.beginPath();
+                l_context.arc(this.target_x_position,this.target_y_position,this.target_radius,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+                    }
+            }
+
+        }
+        
+        
+        var g_TargetObjectArray = new Array(39);
+        function f_InitTargets()
+        {
+            var l_Initial_x = 30;
+            var l_x = l_Initial_x;
+            var l_y = 50;
+            var l_r = 20;
+            var color_array = [ '#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#E6B333', '#3366E6', '#999966', '#99FF99', '#B34D4D', '#809980'];
+            
+            //array[Math.floor(Math.random() * array.length)];
+
+            for(var i=0;i<g_TargetObjectArray.length;i++)
+            {
+                var l_color = color_array[Math.floor(Math.random() * color_array.length)];
+                g_TargetObjectArray[i] = new c_target(l_x,l_y,l_r,l_color);
+                l_x += l_r*3 ;
+                
+                if((i+1) % 13 == 0)
+                   {
+                        l_x = l_Initial_x;
+                        l_y += l_r*3 ;
+                   }
+            }
+        }
+        
+        function f_DrawAllTargets(l_Ctx)
+        {
+
+            for(var i=0;i<g_TargetObjectArray.length;i++)
+            {
+                g_TargetObjectArray[i].m_draw_target(l_Ctx);
+            }
+        }
+
+        function f_collision_detection()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ; i++ )
+            {
+                
+                if(g_TargetObjectArray[i].isActive ==1)
+                {
+                    var l_proximity = Math.hypot(obj_tank.obj_bullet.bullet_posX - g_TargetObjectArray[i].target_x_position , obj_tank.obj_bullet.bullet_posY - g_TargetObjectArray[i].target_y_position );
+
+                    if( l_proximity < obj_tank.obj_bullet.bullet_radius + g_TargetObjectArray[i].target_radius )
+                    {
+
+                        g_TargetObjectArray[i].isActive = 0;
+                        obj_tank.obj_bullet.isActive = 0;
+
+                        obj_tank.obj_bullet.bullet_posX = obj_tank.turret_posX;
+                        obj_tank.obj_bullet.bullet_posY = obj_tank.turret_posY;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        function f_reset_game()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ;i++ )
+            {
+                g_TargetObjectArray[i].isActive = 1;
+            }
+        }
+        
+
+        function f_clearCanvas()
+        {
+            g_context.clearRect(0,0,g_canvas.width,g_canvas.height);
+            g_context.strokeStyle = "black";
+            g_context.strokeRect(0,0,g_canvas.width,g_canvas.height);
+        }
+
+        function f_game_root()
+        {
+            f_collision_detection();
+            obj_tank.m_move_turret();
+            obj_tank.m_ManageBulletMovement(g_canvas);
+
+            f_clearCanvas()
+
+            obj_tank.m_drawTank(g_context);
+            f_DrawAllTargets(g_context);
+        }
+        
+        
+       
+
+        function f_keyUp_eventHandler(l_evt)
+        {   
+            if(l_evt.keyCode == 37)
+            {
+                obj_tank.RotateAnticlockwise = 0;
+            }
+            if(l_evt.keyCode == 39)
+            {
+                obj_tank.RotateClockwise = 0;
+            }
+           
+        }
+        function f_keyDown_eventHandler(l_evt) 
+        {   
+            if(l_evt.keyCode == 37)
+            {
+                obj_tank.RotateAnticlockwise = 1;
+            }
+            if(l_evt.keyCode == 39)
+            {
+                obj_tank.RotateClockwise = 1;
+            }
+            if(l_evt.keyCode == 32)
+            {
+                obj_tank.m_turret_Shoot();
+            }
+        }
+        
+        
+        var obj_tank    = new c_tank((g_canvas.width/2),75,"lightgreen");
+        f_InitTargets();
+        var interval_ID = setInterval(f_game_root,g_time);
+
+        
+
+        document.addEventListener("keydown",f_keyDown_eventHandler);
+        document.addEventListener("keyup",f_keyUp_eventHandler);
+
+    </script>
+
+</body>
+</html>

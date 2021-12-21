@@ -1,0 +1,232 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application on selection sort</title>
+
+    <canvas id="myCanvas" width="800" height="600" ></canvas>
+
+</head>
+<body>
+    
+    <script>
+
+        var g_cnv = document.getElementById("myCanvas");
+        var g_ctx = g_cnv.getContext("2d");
+
+        var g_fps = 30;
+        var g_timeInterval = 1000/g_fps;
+
+        var g_RectArrayObj = new Array(5);
+        var g_HeightArray =  [400,300,500,100,200];
+        var g_ColorArray =   ["darkred","lightblue","green","yellow","pink"];
+
+        var g_isRectMoving = 0;
+        var g_StartSorting = 0;
+
+        var g_Rect_1_TargetX = 0;
+        var g_Rect_2_TargetX = 0;
+        var g_RectIndex_1 = 0;
+        var g_RectIndex_2 = 0;
+
+        var i = 0;
+        var j = i+1;
+        
+        var check_sum;
+        
+
+        class c_bar
+        {
+            constructor(l_height,l_posX,l_color)
+            {
+                this.y_position = 550; 
+                this.x_position = l_posX;
+                this.width      = 50;
+                this.height     = l_height
+                this.color      = l_color;
+                this.isHighlighted = 0;
+            }
+
+            m_drawBox(l_ctx)
+            {
+                l_ctx.fillStyle = this.color;
+                l_ctx.fillRect(this.x_position,this.y_position,this.width,-this.height);
+                if(this.isHighlighted == 1)
+                   {
+                        l_ctx.strokeStyle = "black";
+                        l_ctx.lineWidth = 3;
+                        l_ctx.strokeRect(this.x_position,this.y_position,this.width,-this.height);
+                   }
+                
+            }
+
+        }
+
+    //<------------------------create objects of class bar----------------------------------------------->
+                        //  height , x position , color  //
+        
+        function f_CreateRectObjs()
+        {
+            var l_Xpos = 200;
+            for( var i=0 ; i < g_RectArrayObj.length ; i++)
+                {
+                    g_RectArrayObj[i] = new c_bar(g_HeightArray[i],l_Xpos,g_ColorArray[i]);
+                    l_Xpos+=50;
+                }
+        }
+    
+        
+        function f_DrawAllRect()
+        {
+            for( var i=0 ; i < g_RectArrayObj.length ; i++)
+                {
+                    g_RectArrayObj[i].m_drawBox(g_ctx);
+                }
+        }
+ 
+  
+        function f_animate_sort(l_array)
+        {
+            var n = l_array.length;
+            
+            
+
+            if(g_StartSorting == 1 && g_isRectMoving == 0)
+            {
+                
+                if(i ==0 )
+                   {
+                        g_SwapCount = 0;
+                   }
+                
+                f_ClearHighlights();
+                
+                
+                console.log(i+">>>>>"+j);
+                if( l_array[i].height > l_array[j].height )
+                {
+                    g_isRectMoving = 1;
+
+                    
+                    
+                    g_RectArrayObj[i].isHighlighted = 1;
+                    g_RectArrayObj[j].isHighlighted = 1;
+                    
+                    g_RectIndex_1 = i;
+                    g_RectIndex_2 = j;
+                    g_Rect_1_TargetX = l_array[j].x_position;
+                    g_Rect_2_TargetX = l_array[i].x_position;
+                    
+                    g_SwapCount++;
+                }
+                
+                if( i < n-1 )
+                {
+                    i++;
+                    j++;                    
+                }
+                if( j > n-1 )
+                {
+                    i = 0;
+                    j = i+1;
+                    
+                    if(g_SwapCount == 0)
+                       {
+                            g_StartSorting = 0;
+                       }
+                }
+                
+            }
+        }
+        
+        function f_ClearHighlights()
+        {
+             for( var i=0 ; i < g_RectArrayObj.length ; i++)
+                {
+                    g_RectArrayObj[i].isHighlighted = 0;
+                }
+        }
+        
+        
+        
+        function f_SwapRect()
+        {
+            if(g_isRectMoving == 1)
+               {
+              
+                    g_RectArrayObj[g_RectIndex_1].x_position += 1;
+                    g_RectArrayObj[g_RectIndex_2].x_position -= 1;
+
+                    if(g_RectArrayObj[g_RectIndex_1].x_position >= g_Rect_1_TargetX)
+                        {
+                            // box position change
+                            g_RectArrayObj[g_RectIndex_1].x_position = g_Rect_1_TargetX;
+                            g_RectArrayObj[g_RectIndex_2].x_position = g_Rect_2_TargetX;
+
+                            g_isRectMoving = 0;
+                            
+                            // actual array sort 
+                            g_temp = g_RectArrayObj[g_RectIndex_1];
+                            g_RectArrayObj[g_RectIndex_1] = g_RectArrayObj[g_RectIndex_2];
+                            g_RectArrayObj[g_RectIndex_2] = g_temp;
+
+                            
+                        }
+               }
+        }
+        
+        
+        
+
+        
+    //<-------------------------------------------------------------------------------------------------->
+
+    function f_clearCanvas()
+    {
+        g_ctx.clearRect(0,0,g_cnv.width,g_cnv.height);
+        g_ctx.strokeStyle = "black";
+        g_ctx.strokeRect(0,0,g_cnv.width,g_cnv.height);
+    }
+    
+       
+        function f_keyDownEventHandler(l_evt) 
+        {   
+            if(l_evt.keyCode == 32)
+            {
+                g_StartSorting = 1;
+            }
+        }
+    
+
+
+    //<----------main game loop------------>
+
+    function f_game_main()
+    {
+        
+        f_animate_sort(g_RectArrayObj);
+        
+        f_SwapRect();
+        
+        f_clearCanvas();
+
+        f_DrawAllRect();
+
+    }
+
+    //<--------------------------->
+    f_CreateRectObjs();
+    
+    var s_id = setInterval(f_game_main,g_timeInterval);
+        
+    document.addEventListener("keydown",f_keyDownEventHandler);
+
+    
+    </script>
+
+</body>
+</html>

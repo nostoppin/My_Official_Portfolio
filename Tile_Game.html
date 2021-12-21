@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tile-game</title>
+
+    
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    <h3 id="timer">TIMER</h3>
+</head>
+<body>
+
+    <script>
+
+        var g_canvas  = document.getElementById("myCanvas");
+        var g_context = g_canvas.getContext("2d");
+
+        var g_frames  = 60;
+        var g_time    = 1000/g_frames;
+
+        var g_cursor_X = 0;
+        var g_cursor_Y = 0;
+
+        var coloumn_count = 4;
+        var row_count = 4;
+
+        var g_letter_array = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O"," "];
+		
+        var g_final_array = ["A","E","I","M",
+                             "B","F","J","N",
+                             "C","G","K","O",
+                             "D","H","L"," "];
+		var g_BlankTileIndex = 15;
+
+        var g_left_tile = 0;
+        var g_right_tile = 0;
+        var g_top_tile = 0;
+        var g_btm_tile = 0;
+
+        var time_counter = 1;
+
+        var g_game_start_flag = 0;
+        
+
+        class c_tile
+        {
+            constructor(l_x,l_y,l_size,l_fillColor,l_text)
+            {
+                this.tile_posX = l_x;
+                this.tile_posY = l_y;
+
+                this.tile_size = l_size;
+
+                this.tile_color = l_fillColor;
+
+                this.tile_letter = l_text;
+            }
+
+            m_drawTile(l_context)
+            {
+                //tile
+                l_context.fillStyle = this.tile_color;
+                l_context.fillRect(this.tile_posX,this.tile_posY,this.tile_size,this.tile_size);
+
+                l_context.strokeStyle = "black";
+                l_context.strokeRect(this.tile_posX,this.tile_posY,this.tile_size,this.tile_size);
+
+                //text 
+                l_context.font = "40px monospace";
+                l_context.fillStyle = "black";
+                l_context.fillText(this.tile_letter, this.tile_posX+(this.tile_size/2)-10 , this.tile_posY+(this.tile_size/2)+12);
+            }
+        }
+
+        
+
+        function f_clearCanvas()
+        {
+            g_context.clearRect(0,0,g_canvas.width,g_canvas.height);
+            g_context.fillStyle = "#dbc563";
+            g_context.fillRect(0,0,g_canvas.width,g_canvas.height);
+        }
+
+        
+
+        var tile_array = new Array((row_count)*(coloumn_count));
+
+        function f_tile_detection()
+        {
+            for( var i=0 ; i<tile_array.length ; i++ )
+            {
+                //neighboring tiles
+				if(g_cursor_X > tile_array[i].tile_posX && 
+				  g_cursor_X < (tile_array[i].tile_posX + tile_array[i].tile_size) &&
+				  g_cursor_Y > tile_array[i].tile_posY && 
+				  g_cursor_Y < (tile_array[i].tile_posY + tile_array[i].tile_size))
+				   {
+				   		//console.log(tile_array[i].tile_letter);
+                        g_left_tile = i-1;
+                        g_right_tile = i+1;
+                        g_top_tile = i-coloumn_count;
+                        g_btm_tile = i+coloumn_count;
+                        
+
+                        f_validate_tiles(i);
+                        
+                        
+						break;
+                        
+				   }
+			}
+        }
+
+        var g_valid_tile_array = new Array(4);
+
+        function f_validate_tiles(clicked_tile)
+        {
+            
+            g_valid_tile_array[0] = clicked_tile-1;
+            g_valid_tile_array[1] = clicked_tile+1;
+            g_valid_tile_array[2] = clicked_tile-coloumn_count;
+            g_valid_tile_array[3] = clicked_tile+coloumn_count;
+
+            //filter level 1
+            if( g_left_tile < 0 )
+            {
+                g_valid_tile_array[0] = null;
+            }
+            if( g_right_tile >= tile_array.length )
+            {
+                g_valid_tile_array[1] = null;
+            }
+            if( g_top_tile < 0 )
+            {
+                g_valid_tile_array[2] = null;
+            }
+            if( g_btm_tile >= tile_array.length )
+            {
+                g_valid_tile_array[3] = null;
+            }
+			
+			// filter level 2
+			if((g_valid_tile_array[0] != null) && (clicked_tile % coloumn_count == 0))
+				{
+					g_valid_tile_array[0] = null;
+				}
+			
+			if((g_valid_tile_array[1] != null) && ((clicked_tile+1) % coloumn_count == 0))
+				{
+					g_valid_tile_array[1] = null;
+				}
+			
+			//console.log(g_valid_tile_array);
+			
+			for( var i=0 ; i<g_valid_tile_array.length ; i++ )
+            {
+                if(g_valid_tile_array[i] != null)
+                {
+                    if(g_valid_tile_array[i] == g_BlankTileIndex)
+					   {
+                           
+					   	   f_SwapTileValue(clicked_tile);
+                           g_game_start_flag = 1;
+						   break;
+					   }
+                }
+            }
+        }
+
+        function f_check_ENDgame_stat()
+        {
+            var l_matchingTile_count = 0;
+            for(var i=0 ; i<tile_array.length ; i++)
+            {
+                if( tile_array[i].tile_letter == g_final_array[i] )
+                {
+                    l_matchingTile_count++;
+                }
+            }
+
+            if( l_matchingTile_count == (coloumn_count*row_count) )
+            {
+                //console.log("finish");
+                window.location.reload(true);
+                window.alert("You've Done IT ! time taken: "+time_counter);
+            }
+        }
+		
+		function f_SwapTileValue(l_ClickedTile)
+		{
+			tile_array[g_BlankTileIndex].tile_letter = tile_array[l_ClickedTile].tile_letter;
+			tile_array[l_ClickedTile].tile_letter = " ";
+			g_BlankTileIndex = l_ClickedTile;   
+		}
+
+        function f_timer()
+        {
+            if( g_game_start_flag == 1 )
+            {  
+                var l_counter = time_counter++;
+                document.getElementById("timer").innerHTML = l_counter;
+            }    
+        }
+
+        function f_createAll_tiles()
+        {
+            var init_tile_x = (g_canvas.width/2) - 200;
+            var init_tile_y = (g_canvas.height/2) - 200;
+
+            var tile_x = init_tile_x;
+            var tile_y = init_tile_y;
+            
+            var tile_size = 100; 
+            
+            var tile_gap_x = tile_size+2;
+            var tile_gap_y = tile_size+2;
+
+            var color = "black";
+
+            for( var i=0 ; i<tile_array.length ; i++ )
+            {
+                var l_temp_letter = g_letter_array[i];
+
+                tile_array[i] = new c_tile(tile_x,tile_y,tile_size,"#ded9c5",l_temp_letter);
+
+                tile_x += tile_gap_x;
+
+                if( (i+1) % (coloumn_count) == 0 )
+                {
+                    tile_x = init_tile_x;
+                    tile_y += tile_size+2;
+                }
+            }
+        }
+
+        function f_drawAll_tiles(l_context)
+        {
+            for( var i=0 ;i<tile_array.length; i++ )
+            {
+                tile_array[i].m_drawTile(l_context);
+            }
+        }
+
+
+        f_createAll_tiles();
+        
+        function game_loop()
+        {
+            //functions
+            f_check_ENDgame_stat();
+            
+            //clear
+            f_clearCanvas();
+
+            //draw
+            f_drawAll_tiles(g_context);
+        }
+        
+
+        var interval_id = setInterval(game_loop,g_time);
+        var timer_id    = setInterval(f_timer,1000);
+
+
+        function f_mouseDown_eventhandler(l_evt)
+        {
+            if( l_evt.button == 0 )
+            {   
+                f_tile_detection();
+            }
+        }
+
+        function f_mouseMove_eventHandler(l_e)
+        {
+            g_cursor_X =l_e.clientX;
+            g_cursor_Y =l_e.clientY;
+        }
+
+        
+
+        document.addEventListener("mousemove",f_mouseMove_eventHandler);
+        document.addEventListener("mousedown",f_mouseDown_eventhandler);
+        
+    </script>
+    
+</body>
+</html> tile_game

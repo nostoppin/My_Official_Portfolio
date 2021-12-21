@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> test </title>
+    <h4 id="score"><b></b></h2>
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    <br>
+    <!--<h3>Health: </h3><h2 id="health"><b></b></h2>-->
+</head>
+<body>
+    
+    <script>
+
+        var g_canvas  = document.getElementById("myCanvas");
+        var g_context = g_canvas.getContext("2d");
+
+
+        var g_frames  = 60;
+        var g_time    = 1000/g_frames;
+
+        var g_color_array = [ '#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#E6B333', '#3366E6', '#999966', '#99FF99', '#B34D4D', '#809980'];
+        
+        var g_CursorX =0;
+        var g_CursorY =0;
+
+        var g_health = 100;
+        var g_score = 0;
+
+        class c_tank 
+        {
+            constructor(l_x,l_y,l_size,l_col)
+            {
+                this.RotateClockwise = 0;
+                this.RotateAnticlockwise = 0;
+                this.shoot = 0;
+
+                this.tank_size    = l_size;
+                this.tank_color   = l_col;
+
+                this.rotationA_rad = 0;
+
+                this.rotationA_deg = -90;  //this
+
+                this.tank_posX = l_x - this.tank_size/2;
+                this.tank_posY = l_y;
+
+                this.turret_height = 15;
+                this.turret_width  = 60; 
+                
+                this.turret_posX = this.tank_posX+(this.tank_size/2);
+                this.turret_posY = this.tank_posY+(this.tank_size/2);   
+                
+                this.bullet_X = this.turret_posX+this.turret_width/2;
+                this.bullet_Y = this.turret_posY+this.turret_height;
+
+                this.obj_bullet = new c_bullet(this.turret_posX,this.turret_posY,this.turret_height);
+            }
+
+            m_drawTank(l_context)
+            {
+
+                l_context.fillStyle = "brown";
+                l_context.beginPath();                                                                                     
+                l_context.arc(this.tank_posX+this.tank_size/2,this.turret_posY,this.tank_size/2+16,0,2*Math.PI,);
+                l_context.fill();
+                l_context.closePath();
+
+                l_context.fillStyle = this.tank_color;
+                l_context.fillRect(this.tank_posX,this.tank_posY,this.tank_size,this.tank_size);
+
+                
+
+               
+
+                l_context.fillStyle = "Black";
+                l_context.beginPath();
+                l_context.arc(this.turret_posX,this.turret_posY,this.turret_height,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+                
+                //turret 
+                l_context.save();
+                l_context.translate(this.turret_posX,this.turret_posY);
+
+                
+                l_context.rotate(this.rotationA_rad);
+
+                l_context.fillStyle = "black";
+                l_context.fillRect(0,-(this.turret_height/2),this.turret_width,this.turret_height);
+
+                l_context.restore();
+                //------
+
+                //bullet
+                this.obj_bullet.m_drawBullet(l_context);
+
+                if( this.bullet_posX > g_canvas.width || this.bullet_posY > g_canvas.height ||
+                    this.bullet_posX < 0 || this.bullet_posY < 0
+                 )
+                {
+                    this.obj_bullet.m_drawBullet(l_context);
+                }
+            }
+
+            m_turret_Shoot()
+            {
+                if(this.obj_bullet.isActive == 0)
+                    {
+                        this.obj_bullet.isActive = 1;
+
+                        this.obj_bullet.bullet_shot_angle = this.rotationA_rad;
+                        //console.log(this.obj_bullet.bullet_shot_angle);
+                        this.obj_bullet.bullet_speed_Y = this.obj_bullet.bullet_initVel;
+                    }
+                
+            }
+            
+            m_ManageBulletMovement(l_Canvas)
+            {
+                this.obj_bullet.m_shot_trajectory();
+                
+                // collision detection with boundaries
+                if(this.obj_bullet.bullet_posX > l_Canvas.width || 
+                    this.obj_bullet.bullet_posX < 0 ||
+                    this.obj_bullet.bullet_posY > l_Canvas.height ||
+                   this.obj_bullet.bullet_posY < 0 )
+                    {
+                        this.obj_bullet.isActive = 0;
+                        this.obj_bullet.bullet_posX = this.turret_posX;
+                        this.obj_bullet.bullet_posY = this.turret_posY;
+                    }
+            }
+        }
+
+        class c_bullet
+        {
+            constructor(l_x,l_y,l_radius)
+            {
+                this.bullet_posX = l_x;
+                this.bullet_posY = l_y;
+
+                this.bullet_posX_initial = l_x;
+                this.bullet_posY_initial = l_y;
+
+                this.bullet_radius = l_radius;
+                this.bullet_color  = "darkred";
+
+                this.bullet_initVel = 30;
+
+                this.bullet_speed_X = 30;
+                this.bullet_speed_Y = this.bullet_initVel; 
+
+                this.isActive = 0;
+                this.bullet_shot_angle = 0;
+                
+                //this.bullet_accln   = -0.8;  //GRAVITY
+                 
+            }
+
+            m_drawBullet(l_context)
+            {
+                if(this.isActive== 0) {return;}
+
+                l_context.fillStyle = this.bullet_color;
+                l_context.beginPath();
+                l_context.arc(this.bullet_posX,this.bullet_posY,this.bullet_radius,0,2*Math.PI);
+                l_context.fill();
+                l_context.closePath();
+            }   
+
+            m_shot_trajectory()
+            {
+                if(this.isActive == 0) {return;}
+                
+                this.bullet_posX += this.bullet_speed_X * Math.cos(this.bullet_shot_angle );
+
+                this.bullet_posY += this.bullet_speed_Y * Math.sin(this.bullet_shot_angle );
+
+                //console.log( this.bullet_speed_Y * Math.sin(this.bullet_shot_angle * Math.PI/180) );
+                //this.bullet_speed_Y += this.bullet_accln; 
+                
+                
+
+                // WHEN BULLET HITS THE GROUND..............
+                if( this.bullet_posY + this.bullet_radius > g_canvas.height )
+                {
+                    
+                    this.bullet_posY = g_canvas.height - this.bullet_radius;
+                    
+                    this.isActive = 0;
+
+                    this.bullet_posX = obj_tank.turret_posX;
+                    this.bullet_posY = obj_tank.turret_posY;
+                }
+                
+            }
+                    
+        }
+        
+
+        class c_target
+        {
+            constructor(l_x,l_y,l_r,l_color)
+            {
+                this.target_y_position              = l_y;
+                this.target_x_position              = l_x;
+
+                this.target_x_position_initial      = l_x;   
+                this.target_y_position_initial      = l_y;
+
+                this.target_radius                  = l_r;
+                this.target_color                   = l_color;  
+
+                //this.target_speed_x                 = Math.floor(Math.random() * (3-1.0)) + 1.0;
+                //this.target_speed_y                 = Math.floor(Math.random() * (3-1.0)) + 1.0;
+
+                this.target_speed_x                 = 0.4;
+                this.target_speed_y                 = 0.4;
+
+                this.isActive                       = 1;
+            }
+
+            m_draw_target(l_context)
+            {
+                if( this.isActive == 1)
+                {
+                    
+                    l_context.fillStyle = this.target_color;
+                    l_context.beginPath();
+                    l_context.arc(this.target_x_position,this.target_y_position,this.target_radius,0,2*Math.PI);
+                    l_context.fill();
+                    l_context.closePath();
+
+                    
+                    l_context.strokeStyle = "black";
+                    l_context.beginPath();
+                    l_context.arc(this.target_x_position,this.target_y_position,this.target_radius,0,2*Math.PI);
+                    l_context.stroke();
+                    l_context.closePath();
+
+                }
+            }
+
+            m_move_target()
+            {
+                var l_temp_angle = Math.atan2( g_canvas.height/2 - this.target_y_position_initial , g_canvas.width/2 - this.target_x_position_initial  )
+
+                this.target_x_position +=  this.target_speed_x * Math.cos(l_temp_angle);
+                this.target_y_position +=  this.target_speed_y * Math.sin(l_temp_angle);
+
+                if( this.target_x_position >= g_canvas.width || this.target_x_position < 0 )
+                {
+                    this.isActive = 0;
+                }
+                if( this.target_y_position >= g_canvas.height || this.target_x_position < 0 )
+                {
+                    this.isActive = 0;
+                }
+            }
+
+        }
+
+        function side_choice()
+        {
+            return Math.random();
+            //console.log(Math.random());
+        }
+
+        //var i=0;
+        //var g_FrameCounter = 0;
+        //if(g_FrameCounter >= g_frames * 3 )
+        
+        var g_TargetObjectArray = new Array(5);
+        function f_InitTargets()
+        {
+            var l_r = 25;
+
+            for(var i=0;i<g_TargetObjectArray.length;i++)
+            {
+                var l_color = g_color_array[Math.floor(Math.random() * g_color_array.length)];
+
+                if( side_choice() <= 0.2 )
+                {
+                    var l_x =  Math.floor(Math.random() * g_canvas.width)
+                    var l_y = 0;
+                }
+                else if( side_choice() > 0.2 && side_choice() < 0.5 )
+                {
+                    var l_x =  Math.floor(Math.random() * g_canvas.width)
+                    var l_y = g_canvas.height;
+                }
+
+                else if( side_choice() > 0.5 && side_choice() <= 0.8 )
+                {
+                    var l_x = 0;
+                    var l_y = Math.floor(Math.random() * g_canvas.height);
+                }
+                else if( side_choice() > 0.8 )
+                {
+                    var l_x = g_canvas.width;
+                    var l_y = Math.floor(Math.random() * g_canvas.height);
+                }
+                
+                g_TargetObjectArray[i] = new c_target(l_x,l_y,l_r,l_color);
+                
+            }
+            
+        }
+
+        
+        
+        function f_DrawAllTargets(l_Ctx)
+        {
+            for(var i=0;i<g_TargetObjectArray.length;i++)
+            {
+                g_TargetObjectArray[i].m_draw_target(l_Ctx);
+                
+            }
+        }
+
+    
+
+        function f_move_targets(l_Ctx)
+        {
+            for( var i=0; i<g_TargetObjectArray.length ;i++ )
+            {
+                g_TargetObjectArray[i].m_move_target();
+            }
+        }
+
+        function f_collision_detection()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ; i++ )
+            {
+                
+                if(g_TargetObjectArray[i].isActive == 1)
+                {
+                    var l_proximity = Math.hypot(obj_tank.obj_bullet.bullet_posX - g_TargetObjectArray[i].target_x_position , obj_tank.obj_bullet.bullet_posY - g_TargetObjectArray[i].target_y_position );
+
+                    if( l_proximity < obj_tank.obj_bullet.bullet_radius + g_TargetObjectArray[i].target_radius )
+                    {
+                        if( obj_tank.obj_bullet.isActive == 1 )
+                        {
+                            g_score++;
+                        }
+
+                        g_TargetObjectArray[i].isActive = 0;
+                        obj_tank.obj_bullet.isActive = 0;
+
+                        obj_tank.obj_bullet.bullet_posX = obj_tank.turret_posX;
+                        obj_tank.obj_bullet.bullet_posY = obj_tank.turret_posY;
+
+                        if( side_choice() <= 0.2 )
+                        {
+                            g_TargetObjectArray[i].target_x_position =  Math.floor(Math.random() * g_canvas.width)
+                            g_TargetObjectArray[i].target_y_position = 0;
+                        }
+                        else if( side_choice() > 0.2 && side_choice() < 0.5 )
+                        {
+                            g_TargetObjectArray[i].target_x_position =  Math.floor(Math.random() * g_canvas.width)
+                            g_TargetObjectArray[i].target_y_position = g_canvas.height;
+                        }
+
+                        if( side_choice() > 0.5 && side_choice() <= 0.8 )
+                        {
+                            g_TargetObjectArray[i].target_x_position = 0;
+                            g_TargetObjectArray[i].target_y_position = Math.floor(Math.random() * g_canvas.height);
+                        }
+                        else if( side_choice() > 0.8 )
+                        {
+                            g_TargetObjectArray[i].target_x_position = g_canvas.width;
+                            g_TargetObjectArray[i].target_y_position = Math.floor(Math.random() * g_canvas.height); 
+                        }
+
+                        g_TargetObjectArray[i].isActive = 0;
+                        obj_tank.obj_bullet.isActive = 0;
+
+                        
+                        break;
+                    }
+                }
+            }
+        }
+
+        function f_manage_tank_collision()
+        {
+            for( i=0; i<g_TargetObjectArray.length ; i++ )
+            {
+                if( 
+                    g_TargetObjectArray[i].target_x_position + g_TargetObjectArray[i].target_radius > obj_tank.tank_posX && //LEFT
+
+                    g_TargetObjectArray[i].target_x_position + g_TargetObjectArray[i].target_radius < obj_tank.tank_posX + obj_tank.tank_size && //RIGHT
+
+                    g_TargetObjectArray[i].target_y_position + g_TargetObjectArray[i].target_radius > obj_tank.tank_posY - obj_tank.tank_size && // TOP
+ 
+                    g_TargetObjectArray[i].target_y_position + g_TargetObjectArray[i].target_radius < obj_tank.tank_posY //BOTTOM   
+                )
+                {
+                    g_health-=0.05;
+
+                    if( g_health < 0 )
+                    {
+                        window.alert("GAME OVER!");
+
+                        f_reset_target();
+                        g_health = 100;
+                    }
+                }
+            }
+        }
+
+        function f_reset_target()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ;i++ )
+            {
+                if( g_TargetObjectArray[i].isActive == 0 )
+                {
+
+                    if( side_choice() <= 0.2 )
+                        {
+                            g_TargetObjectArray[i].target_x_position =  Math.floor(Math.random() * g_canvas.width)
+                            g_TargetObjectArray[i].target_y_position = 0;
+                        }
+                        else if( side_choice() > 0.2 && side_choice() < 0.5 )
+                        {
+                            g_TargetObjectArray[i].target_x_position =  Math.floor(Math.random() * g_canvas.width)
+                            g_TargetObjectArray[i].target_y_position = g_canvas.height;
+                        }
+
+                        if( side_choice() > 0.5 && side_choice() <= 0.8 )
+                        {
+                            g_TargetObjectArray[i].target_x_position = 0;
+                            g_TargetObjectArray[i].target_y_position = Math.floor(Math.random() * g_canvas.height);
+                        }
+                        else if( side_choice() > 0.8 )
+                        {
+                            g_TargetObjectArray[i].target_x_position = g_canvas.width;
+                            g_TargetObjectArray[i].target_y_position = Math.floor(Math.random() * g_canvas.height); 
+                        }
+                
+                    
+                    g_TargetObjectArray[i].target_x_position_initial = g_TargetObjectArray[i].target_x_position;
+                    g_TargetObjectArray[i].target_y_position_initial = g_TargetObjectArray[i].target_y_position;
+
+                    g_TargetObjectArray[i].isActive = 1;
+
+                    
+
+                    var l_temp_color = g_color_array[Math.floor(Math.random() * g_color_array.length)];
+                    g_TargetObjectArray[i].target_color =  l_temp_color; 
+                }
+            }
+        }
+
+        function f_update_health()
+        {
+            document.getElementById("health").innerHTML = g_health;
+        }
+
+        function f_update_score()
+        {
+            var l_temp = Math.round(g_score);
+            document.getElementById("score").innerHTML = l_temp;
+        }
+
+        function f_difficulty()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ; i++)
+            {
+                g_TargetObjectArray[i].target_speed_x+=0.00005;
+                g_TargetObjectArray[i].target_speed_y+=0.00005;
+            }
+        }
+        
+        function f_reset_game()
+        {
+            for( var i=0; i<g_TargetObjectArray.length ;i++ )
+            {
+                g_TargetObjectArray[i].isActive = 1;
+            }
+        }
+        
+
+        function f_get_angleCoordinates()
+        {
+                var l_angle = Math.atan2(obj_tank.turret_posY - g_CursorY , obj_tank.turret_posX - g_CursorX );
+                
+                obj_tank.rotationA_rad =  l_angle - Math.PI;
+        }
+
+        
+
+        function f_clearCanvas()
+        {
+            g_context.clearRect(0,0,g_canvas.width,g_canvas.height);
+            g_context.fillStyle = "#B0FCF8";
+            g_context.fillRect(0,0,g_canvas.width,g_canvas.height);
+        }
+
+        function f_game_root()
+        {
+            side_choice(); 
+            
+            //f_update_health(); 
+            f_update_score(); //w
+
+            
+            f_get_angleCoordinates();
+            f_move_targets(g_context);
+            f_collision_detection();
+            f_manage_tank_collision()
+            
+            f_difficulty()
+            
+            
+            obj_tank.m_ManageBulletMovement(g_canvas);
+            
+            f_reset_target();
+
+            f_clearCanvas()//
+
+            f_DrawAllTargets(g_context);
+            obj_tank.m_drawTank(g_context);
+            
+        }
+        
+
+        function f_keyUp_eventHandler(l_evt)
+        {   
+            if(l_evt.keyCode == 37)
+            {
+                obj_tank.RotateAnticlockwise = 0;
+            }
+            if(l_evt.keyCode == 39)
+            {
+                obj_tank.RotateClockwise = 0;
+            }
+           
+        }
+        function f_keyDown_eventHandler(l_evt) 
+        {   
+            if(l_evt.keyCode == 37)
+            {
+                obj_tank.RotateAnticlockwise = 1;
+            }
+            if(l_evt.keyCode == 39)
+            {
+                obj_tank.RotateClockwise = 1;
+            }
+        }
+
+        function f_mouseDown_eventhandler(l_evt)
+        {
+            if( l_evt.button == 0 )
+            {   
+                obj_tank.m_turret_Shoot();
+            }
+        }
+        
+        
+
+        function f_mousemove_eventHandler(l_e)
+        {
+            g_CursorX =l_e.clientX;
+            g_CursorY =l_e.clientY;
+        }
+        
+        
+        var obj_tank    = new c_tank(g_canvas.width/2,g_canvas.height/2,80,"#f56f42");
+
+        f_InitTargets();
+
+
+        var interval_ID = setInterval(f_game_root,g_time);
+
+        
+
+        document.addEventListener("keydown",f_keyDown_eventHandler);
+        document.addEventListener("keyup",f_keyUp_eventHandler);
+        document.addEventListener("mousemove",f_mousemove_eventHandler);
+        document.addEventListener("mousedown",f_mouseDown_eventhandler);
+
+    </script>
+
+</body>
+</html>

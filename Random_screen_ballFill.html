@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment 16-4</title>
+
+    <canvas id = "myCanvas" width = "800" height = "600"></canvas>
+
+</head>
+<body>
+    
+    <script>
+
+        var cnv = document.getElementById("myCanvas");
+        var ctx = cnv.getContext("2d");
+
+        var frames_per_sec = 60;                                   //DO NOT MESS WITH THEM 
+        var t_interval = 1000/frames_per_sec; // in miliseconds    //DO NOT MESS WITH THEM
+        
+        //CONSTANT DETAILS
+        var sAngle = 0;
+        var eAngle = 2*Math.PI;
+        var radius = 20;
+
+///-------BALL DETAILS--------///
+        var centerX = 100;
+        var centerY = 200;
+        var cirColor = "red";
+        var g_speedX = 5;
+        var g_speedY = 4;
+
+        var b2_centerX = 400;
+        var b2_centerY = 400;
+        var b2_cirColor = "blue";
+        var b2_g_speedX = 5;
+        var b2_g_speedY = 4;
+
+        var b3_centerX = 600;
+        var b3_centerY = 300;
+        var b3_cirColor = "yellow";
+        var b3_g_speedX = 4;
+        var b3_g_speedY = 3;
+
+        var b4_centerX = 300;
+        var b4_centerY = 500;
+        var b4_cirColor = "green";
+        var b4_g_speedX = 3;
+        var b4_g_speedY = 3;
+
+        var b5_centerX = 700;
+        var b5_centerY = 100;
+        var b5_cirColor = "black";
+        var b5_g_speedX = 5;
+        var b5_g_speedY = 3;
+
+////------------------------------------------///
+
+        function clear_canvas()     // clears the canvas
+        {
+            ctx.clearRect(0,0,cnv.width,cnv.height);
+            ctx.strokeRect(0,0,cnv.width,cnv.height);
+        }
+
+
+        function draw_ball(c_X,c_Y,r,sAL,eAL,clr)
+        {
+            ctx.beginPath();
+            ctx.arc(c_X,c_Y,r,sAL,eAL)
+            ctx.fillStyle = clr;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+
+        function move1()
+        {   
+            
+            centerX += g_speedX;
+            centerY += g_speedY;
+            
+            if( (centerX+radius)>cnv.width || (centerX-radius)<0 )
+            {
+                g_speedX = -g_speedX;
+            }
+              //remove comment to trigger Y axis movement 
+            if( (centerY+radius)>cnv.height || (centerY-radius)<0)
+            {
+                g_speedY = -g_speedY;
+            }
+        }
+
+        function move2()
+        {   
+            
+            b2_centerX += b2_g_speedX;
+            b2_centerY += b2_g_speedY;
+            
+            if( (b2_centerX+radius)>cnv.width || (b2_centerX-radius)<0 )
+            {
+                b2_g_speedX = -b2_g_speedX;
+            }
+              //remove comment to trigger Y axis movement 
+            if( (b2_centerY+radius)>cnv.height || (b2_centerY-radius)<0)
+            {
+                b2_g_speedY = -b2_g_speedY;
+            }
+        }
+
+        function move3()
+        {   
+            
+            b3_centerX += b3_g_speedX;
+            b3_centerY += b3_g_speedY;
+            
+            if( (b3_centerX+radius)>cnv.width || (b3_centerX-radius)<0 )
+            {
+                b3_g_speedX = -b3_g_speedX;
+            }
+              //remove comment to trigger Y axis movement 
+            if( (b3_centerY+radius)>cnv.height || (b3_centerY-radius)<0)
+            {
+                b3_g_speedY = -b3_g_speedY;
+            }
+        }
+
+        function move4()
+        {   
+            
+            b4_centerX += b4_g_speedX;
+            b4_centerY += b4_g_speedY;
+            
+            if( (b4_centerX+radius)>cnv.width || (b4_centerX-radius)<0 )
+            {
+                b4_g_speedX = -b4_g_speedX;
+            }
+              //remove comment to trigger Y axis movement 
+            if( (b4_centerY+radius)>cnv.height || (b4_centerY-radius)<0)
+            {
+                b4_g_speedY = -b4_g_speedY;
+            }
+        }
+
+        function move5()
+        {   
+            
+            b5_centerX += b5_g_speedX;
+            b5_centerY += b5_g_speedY;
+            
+            if( (b5_centerX+radius)>cnv.width || (b5_centerX-radius)<0 )
+            {
+                b5_g_speedX = -b5_g_speedX;
+            }
+              //remove comment to trigger Y axis movement 
+            if( (b5_centerY+radius)>cnv.height || (b5_centerY-radius)<0)
+            {
+                b5_g_speedY = -b5_g_speedY;
+            }
+        }
+
+    
+
+
+        function GameLoopMain()
+        {
+            
+            //mechanics
+            move1();
+            move2();
+            move3();
+            move4();
+            move5();
+            //clear 
+            clear_canvas();
+
+            //draw fig
+            draw_ball(centerX,centerY,radius,sAngle,eAngle,cirColor);
+            draw_ball(b2_centerX,b2_centerY,radius,sAngle,eAngle,b2_cirColor);
+            draw_ball(b3_centerX,b3_centerY,radius,sAngle,eAngle,b3_cirColor);
+            draw_ball(b4_centerX,b4_centerY,radius,sAngle,eAngle,b4_cirColor);
+            draw_ball(b5_centerX,b5_centerY,radius,sAngle,eAngle,b5_cirColor);
+            
+        }
+        
+        setInterval(GameLoopMain,t_interval);  // setInterval runs code block mentioned after every time interval
+                                               // closeInterval used to stop the same... but we dont require here..
+
+    </script>
+    
+</body>
+</html>

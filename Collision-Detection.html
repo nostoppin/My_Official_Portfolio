@@ -1,0 +1,170 @@
+
+<html>
+    <canvas width="800" height="600" id="myCanvas"> </canvas>
+    <script>
+                
+        //----------------------------------------------------------------------
+        function C_Box(l_x,l_y,l_w,l_h,l_c)
+        {
+            this.Xpos           = l_x ;
+            this.Ypos           = l_y ;
+            this.Width          = l_w ;
+            this.Height         = l_h ;
+            this.Color          = l_c ;
+            this.MoveLeftFlag   = 0;
+            this.MoveRightFlag  = 0;
+            this.MoveUpFlag     = 0;
+            this.MoveDownFlag   = 0;
+            this.MoveSpeed      = 1;
+           
+
+            this.m_Draw = function m_Draw(l_context)
+            {
+                l_context.fillStyle = this.Color ;
+                l_context.fillRect(this.Xpos , this.Ypos , this.Width ,this.Height);
+                
+            };
+            
+            this.m_Move = function m_Move()
+            {
+                if(this.MoveLeftFlag == 1)  {this.Xpos += this.MoveSpeed;}
+                if(this.MoveRightFlag == 1) {this.Xpos -= this.MoveSpeed;}
+                if(this.MoveUpFlag == 1)    {this.Ypos -= this.MoveSpeed;}
+                if(this.MoveDownFlag == 1)  {this.Ypos += this.MoveSpeed;}
+                
+            };
+        }
+        
+        
+        //----------------------------------------------------------------------
+        
+        function C_Circle(l_x,l_y,l_r,l_c)
+        {
+            this.Xpos           = l_x ;
+            this.Ypos           = l_y ;
+            this.Radius         = l_r ;
+            this.Color          = l_c ;
+            this.StartAngle     = 0 ;
+            this.EndAngle       = 2 * Math.PI ;
+            this.MoveLeftFlag   = 0;
+            this.MoveRightFlag  = 0;
+            this.MoveUpFlag     = 0;
+            this.MoveDownFlag   = 0;
+            this.MoveSpeed      = 1;
+           
+
+            this.m_Draw = function m_Draw(l_context)
+            {
+                l_context.fillStyle = this.Color ;
+                l_context.beginPath();
+                l_context.arc(this.Xpos,this.Ypos,this.Radius,this.StartAngle,this.EndAngle);
+                l_context.fill();
+                l_context.closePath();
+                
+            };
+            
+            this.m_Move = function m_Move()
+            {
+                if(this.MoveLeftFlag == 1)  {this.Xpos += this.MoveSpeed;}
+                if(this.MoveRightFlag == 1) {this.Xpos -= this.MoveSpeed;}
+                if(this.MoveUpFlag == 1)    {this.Ypos -= this.MoveSpeed;}
+                if(this.MoveDownFlag == 1)  {this.Ypos += this.MoveSpeed;}
+                
+            };
+        }
+        
+       
+        
+        
+        //-----------------------------FUNCTIONS-----------------------------
+
+        function f_UpdateClosestPointPos()    //THIS IS A CRICLE indicating box boundary  
+        {                                     // g_closestPointOnBox => function to create circle and assign x & y   
+            if(g_Circle.Xpos < g_Box.Xpos) 
+                {
+                    g_ClosestPointOnBox.Xpos = g_Box.Xpos;
+                }
+            else if(g_Circle.Xpos > g_Box.Xpos+g_Box.Width)
+                {
+                    g_ClosestPointOnBox.Xpos = g_Box.Xpos+g_Box.Width;
+                }
+            else
+                {
+                    g_ClosestPointOnBox.Xpos = g_Circle.Xpos;
+                }
+            
+            if(g_Circle.Ypos < g_Box.Ypos) 
+                {
+                    g_ClosestPointOnBox.Ypos = g_Box.Ypos;
+                }
+            else if(g_Circle.Ypos > g_Box.Ypos+g_Box.Height)
+                {
+                    g_ClosestPointOnBox.Ypos = g_Box.Ypos+g_Box.Height;
+                }
+            else
+                {
+                    g_ClosestPointOnBox.Ypos = g_Circle.Ypos;
+                }
+            
+            
+        }
+        
+        function f_FindDistanceBetweenTwoPoints(l_x1,l_y1,l_x2,l_y2)
+        {
+            return Math.sqrt(((l_x1-l_x2)*(l_x1-l_x2))+((l_y1-l_y2)*(l_y1-l_y2)));
+        }
+        
+        
+        ////////////////////////////////////////////////////////////////////////
+        function f_DetectCircleToBoxCollision()
+        {
+            g_Dist = f_FindDistanceBetweenTwoPoints(g_Circle.Xpos,g_Circle.Ypos,g_ClosestPointOnBox.Xpos,g_ClosestPointOnBox.Ypos);
+            
+            if(g_Dist <= g_Circle.Radius)
+               {
+                    g_Circle.Color = "green";
+               }
+            else
+                {
+                    g_Circle.Color = "blue";
+                }
+        }
+        
+       function f_clearCanvas()
+        {
+            g_context.clearRect(0,0,g_canvas.width,g_canvas.height);
+            g_context.strokeRect(0,0,g_canvas.width,g_canvas.height);
+        } 
+        
+        function f_MouseMoveEventHandler(l_event)
+        {
+            g_Circle.Xpos = l_event.clientX;
+            g_Circle.Ypos = l_event.clientY;
+        }
+        
+        function f_GameLoop()
+        {
+            f_UpdateClosestPointPos();
+            f_DetectCircleToBoxCollision();
+            
+            f_clearCanvas() ;
+
+            g_Box.m_Draw(g_context);
+            g_Circle.m_Draw(g_context);
+            g_ClosestPointOnBox.m_Draw(g_context);
+        }
+        //----------------------------------------------------------------
+        
+        var g_canvas            = document.getElementById("myCanvas");
+        var g_context           = g_canvas.getContext("2d");
+        var g_FPS               = 30;
+        var g_timeInterval      = 1000/g_FPS ;
+        var g_Dist              = 0;
+        var g_Box               = new C_Box(250,300,300,100,"yellow");
+        var g_Circle            = new C_Circle(100,100,50,"blue");
+        var g_ClosestPointOnBox = new C_Circle(250,300,5,"red");
+        
+        setInterval(f_GameLoop,g_timeInterval) ;
+        document.addEventListener("mousemove",f_MouseMoveEventHandler);
+    </script>
+</html>
